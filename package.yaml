@@ -37,6 +37,7 @@ executables:
     - kubeyaml-hs
     - YamlReference
     - bytestring
+    - containers
 
 tests:
   kubeyaml-hs-test:

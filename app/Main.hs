@@ -2,8 +2,16 @@ module Main where
 
 import qualified Data.ByteString.Lazy.Char8 as C
 import Text.Yaml.Reference (Code(..),Token(..),yaml)
+import Data.Map(Map)
+import Data.Map as Map
 
 import Lib
+
+data YamlNode = ScalarNode Token | MappingNode (Map YamlNode YamlNode) | SequenceNode [YamlNode]
+
+-- Extract all documents from stream
+documents :: [Token] -> [YamlNode]
+documents = undefined
 
 main :: IO ()
 main = do

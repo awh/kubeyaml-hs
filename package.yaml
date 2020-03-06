@@ -38,6 +38,7 @@ executables:
     - YamlReference
     - bytestring
     - containers
+    - parsec
 
 tests:
   kubeyaml-hs-test:

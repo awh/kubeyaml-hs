@@ -42,59 +42,48 @@ noneOf cs = satisfy (\t -> not (elem (tCode t) cs))
 code :: Stream s Identity Token => Code -> ParsecT s u Identity Token
 code c = satisfy (\t -> c == tCode t) <?> show [c]
 
+notCode :: Stream s Identity Token => Code -> ParsecT s u Identity Token
+notCode c = satisfy (\t -> c /= tCode t) <?> show [c]
+
+bracket :: Stream s Identity Token => Code -> Code -> ParsecT s u Identity a -> ParsecT s u Identity a
+bracket startCode endCode contentParser = do
+    skipMany $ notCode startCode
+    between (code startCode) (code endCode) contentParser
+
 parseStream :: Stream s Identity Token => ParsecT s u Identity [Document]
 parseStream = many parseDocument
 
 parseDocument :: Stream s Identity Token => ParsecT s u Identity Document
 parseDocument = do
-    node <- between (code BeginDocument) (code EndDocument) internal
+    node <- bracket BeginDocument EndDocument parseNode
     return $ Document node
-    where
-        internal = do
-            optional $code DirectivesEnd
-            parseNode
 
 parseNode :: Stream s Identity Token => ParsecT s u Identity Node
 parseNode = do
-    node <- between (code BeginNode) (code EndNode) internal
-    skipMany $ code Break
-    return node
-    where
-        internal = do
-            skipMany $ code Break
-            choice [parseScalar, parseSequence, parseMapping]
+    bracket BeginNode EndNode (choice [parseScalar, parseSequence, parseMapping])
 
 parseScalar :: Stream s Identity Token => ParsecT s u Identity Node
 parseScalar = do
-    text <- between (code BeginScalar) (code EndScalar) (code Text)
+    text <- bracket BeginScalar EndScalar (code Text)
     return $ Scalar text
 
 parseSequence :: Stream s Identity Token => ParsecT s u Identity Node
 parseSequence = do
-    nodes <- between (code BeginSequence) (code EndSequence) (many1 node)
+    nodes <- bracket BeginSequence EndSequence (many1 parseNode)
     return $ Sequence nodes
-    where
-        node = do
-            optional $ code Indent
-            code Indicator
-            optional $ code White
-            node <- parseNode
-            skipMany $ code Break
-            return node
 
 parseMapping :: Stream s Identity Token => ParsecT s u Identity Node
 parseMapping = do
-    pairs <- between (code BeginMapping) (code EndMapping) (many1 pair)
+    pairs <- bracket BeginMapping EndMapping (many1 parsePair)
     return $ Mapping $ Map.fromList pairs
+
+parsePair :: Stream s Identity Token => ParsecT s u Identity (Node, Node)
+parsePair = do
+    bracket BeginPair EndPair contentParser
     where
-        pair = do
-            optional $ code Indent
-            code BeginPair
+        contentParser = do
             key <- parseNode
-            code Indicator
-            optional $ code White
             value <- parseNode
-            code EndPair
             return (key, value)
 
 main :: IO ()

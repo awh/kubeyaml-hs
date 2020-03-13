@@ -24,6 +24,10 @@ dependencies:
 
 library:
   source-dirs: src
+  dependencies:
+  - YamlReference
+  - containers
+  - parsec
 
 executables:
   kubeyaml-hs-exe:

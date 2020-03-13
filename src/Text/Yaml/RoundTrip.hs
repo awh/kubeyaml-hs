@@ -24,7 +24,7 @@ deriving instance Ord Token
 data Document = Document Node
     deriving (Show, Eq)
 
-data Node = Scalar Token | Mapping (Map Node Node) | Sequence [Node]
+data Node = Scalar Token | Mapping [(Node, Node)] | Sequence [Node]
     deriving (Show, Eq, Ord)
 
 satisfy :: Stream s Identity Token => (Token -> Bool) -> ParsecT s u Identity Token
@@ -80,7 +80,7 @@ parseSequence = do
 parseMapping :: Stream s Identity Token => ParsecT s u Identity Node
 parseMapping = do
     pairs <- bracket BeginMapping EndMapping (many parsePair)
-    return $ Mapping $ Map.fromList pairs
+    return $ Mapping pairs
 
 parsePair :: Stream s Identity Token => ParsecT s u Identity (Node, Node)
 parsePair = do

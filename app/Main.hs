@@ -4,6 +4,8 @@ module Main where
 import qualified Data.ByteString.Lazy.Char8 as C
 import Text.Yaml.Reference (Code(..),Token(..),yaml)
 
+import qualified Data.List (find)
+
 import Text.Yaml.RoundTrip
 import Text.Parsec (runParser)
 
@@ -12,14 +14,30 @@ type Kind = String
 type MetadataName = String
 type ContainerName = String
 
-findNode :: [String] -> Node -> Maybe Node
-findNode ns node =
+lookupScalar :: String -> [(Node, Node)] -> Maybe Node
+lookupScalar s ns = fmap snd $ Data.List.find pred ns 
+    where
+        pred :: (Node, Node) -> Bool
+        pred (Scalar t, _) = s == tText t
+        pred _ = False
 
-find :: Namespace -> Kind -> MetadataName -> ContainerName -> Document -> Maybe Scalar
-find ns k mn cn d =
-    case d of
-        Mapping md -> undefined
-        _          -> Nothing 
+findNode :: [String] -> Node -> Maybe Node
+findNode (n:ns) (Mapping kvps) =
+    case (lookupScalar n kvps) of
+      Just v -> findNode ns v
+      _ -> Nothing
+findNode _ _ = Nothing
+
+find :: Namespace -> Kind -> MetadataName -> ContainerName -> Document -> Maybe Node
+
+find ns k mn cn (Document root) =
+    where
+
+        metadataName = findNode ["metadata", "name"] root
+        containers = findNode ["spec", "template", "spec", "containers"]
+
+find _ _ _ _ _ = Nothing
+
 
 main :: IO ()
 main = do

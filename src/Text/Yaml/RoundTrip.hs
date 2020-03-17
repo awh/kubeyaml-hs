@@ -69,7 +69,11 @@ parseNode = do
 
 parseScalar :: Stream s Identity Token => ParsecT s u Identity Node
 parseScalar = do
-    text <- bracket BeginScalar EndScalar (code Text)
+    text <- bracket BeginScalar EndScalar $ do
+        optional $ code Indicator
+        text' <- code Text
+        optional $ code Indicator
+        return text'
     return $ Scalar text
 
 parseSequence :: Stream s Identity Token => ParsecT s u Identity Node

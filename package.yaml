@@ -43,6 +43,7 @@ executables:
     - bytestring
     - containers
     - parsec
+    - optparse-applicative
 
 tests:
   kubeyaml-hs-test:

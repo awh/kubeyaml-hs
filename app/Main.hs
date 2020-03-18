@@ -7,8 +7,12 @@ import Text.Yaml.Reference (Code(..),Token(..),yaml)
 import Data.Maybe (isJust, catMaybes)
 import qualified Data.List (find)
 
+import System.IO (stdin)
+
 import Text.Yaml.RoundTrip
 import Text.Parsec (runParser)
+
+import Options.Applicative (Parser,ReadM,ParserInfo,long,option,value,info,(<**>),fullDesc,strOption,optional,maybeReader,helper,auto,showDefault,subparser,command,progDesc,execParser)
 
 import Debug.Trace
 
@@ -77,10 +81,10 @@ findContainer ns k mn cn (Document root) = do
 findContainers :: Namespace -> Kind -> MetadataName -> ContainerName -> [Document] -> [Token]
 findContainers ns k mn cn ds = catMaybes $ map (findContainer ns k mn cn) ds
 
-printMatching :: [Token] -> [Document] -> IO ()
-printMatching ts ds = putStr $ replaceTokens rts "helloworld" ts
+printMatching :: ImageOptions -> [Token] -> [Document] -> IO ()
+printMatching io ts ds = putStr $ replaceTokens rts (image io) ts
     where
-        rts = findContainers "default" "Deployment" "nginx-deployment" "nginx" ds
+        rts = findContainers (namespace io) (kind io) (name io) (container io) ds
 
 replaceTokens :: [Token] -- ^ Scalar tokens to be replaced
               -> String  -- ^ Replacement value
@@ -90,10 +94,41 @@ replaceTokens rts rv ts = concat $ fmap toString ts
     where
         toString t = if (elem t rts) then rv else (tText t)
 
+data Options = Options
+    { optCommand :: Command
+    }
+
+data ImageOptions = ImageOptions
+    { namespace :: String
+    , kind      :: String
+    , name      :: String
+    , container :: String
+    , image     :: String
+    }
+
+data Command = Image ImageOptions
+
+imageCommandParser = Image <$> imageOptionsParser
+
+imageOptionsParser :: Parser ImageOptions
+imageOptionsParser = ImageOptions
+    <$> strOption (long "namespace")
+    <*> strOption (long "kind")
+    <*> strOption (long "name")
+    <*> strOption (long "container")
+    <*> strOption (long "image")
+
+optionsParser :: Parser Options
+optionsParser = Options <$> subparser (command "image" (info imageCommandParser (progDesc "update an image ref")))
+
 main :: IO ()
 main = do
-    bytes <- C.readFile "test.yaml"
-    let ts = yaml "-" bytes False
-    case (runParser parseStream () "" ts) of
-      Left e -> putStrLn $ show e
-      Right ds -> printMatching ts ds
+    options <- execParser $ info (optionsParser <**> helper) fullDesc
+    case (optCommand options) of
+        Image imageOptions -> do
+            --bytes <- C.readFile "test.yaml"
+            bytes <- C.hGetContents stdin
+            let ts = yaml "-" bytes False
+            case (runParser parseStream () "-" ts) of
+                Left e -> putStrLn $ show e
+                Right ds -> printMatching imageOptions ts ds

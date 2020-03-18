@@ -1,6 +1,6 @@
 # kubeyaml-hs
 
-A Haskell implementation of https://github.com/squaremo/kubeyaml, using the reference YAML 1.2 parser.
+A Haskell implementation of https://github.com/squaremo/kubeyaml, using the [reference YAML 1.2 parser](https://github.com/orenbenkiki/yamlreference).
 
 ## Prerequisites
 

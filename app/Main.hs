@@ -3,8 +3,9 @@ module Main where
 import qualified Data.ByteString.Lazy.Char8 as C
 import Text.Yaml.Reference (Code(..),Token(..),yaml)
 
-import KubeYaml (applyFilter,ImageOptions(..))
+import KubeYaml (updateImages ,ImageOptions(..))
 
+import System.Exit (die)
 import System.IO (stdin)
 
 import Text.Yaml.RoundTrip
@@ -39,5 +40,5 @@ main = do
             bytes <- C.hGetContents stdin
             let tokens = yaml "-" bytes False
             case (runParser parseStream () "-" tokens) of
-                Left e -> putStrLn $ (show tokens ++ show e)
-                Right docs -> putStr $ applyFilter imageOptions tokens docs
+                Left e -> die $ (show tokens ++ show e)
+                Right docs -> putStr $ updateImages imageOptions tokens docs

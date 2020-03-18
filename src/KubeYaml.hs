@@ -1,5 +1,5 @@
 module KubeYaml
-    ( applyFilter
+    ( updateImages
     , ImageOptions(..)
     )
     where
@@ -24,8 +24,10 @@ type Kind = String
 type MetadataName = String
 type ContainerName = String
 
-findContainer :: Namespace -> Kind -> MetadataName -> ContainerName -> Document -> Maybe Token
-findContainer ns k mn cn (Document root) = do
+-- | Search the document for a matching container, and return the text token
+-- from the input stream which holds its image reference.
+findImageToken :: Namespace -> Kind -> MetadataName -> ContainerName -> Document -> Maybe Token
+findImageToken ns k mn cn (Document root) = do
         ns' <- withDefaultText "default" $ textOf $ nodeAt ["metadata", "namespace"] root
         k'  <- textOf $ nodeAt ["kind"] root
         mn' <- textOf $ nodeAt ["metadata", "name"] root
@@ -34,13 +36,17 @@ findContainer ns k mn cn (Document root) = do
         i   <- lookupScalar "image" c
         if ns == ns' && k == k' && mn == mn'
         then case i of
-            (Scalar t) -> Just t
+            (Scalar token) -> Just token
             _ -> Nothing
         else Nothing
 
-findContainers :: Namespace -> Kind -> MetadataName -> ContainerName -> [Document] -> [Token]
-findContainers ns k mn cn ds = catMaybes $ map (findContainer ns k mn cn) ds
+-- | Search a list of documents for matching containers, returning the text
+-- tokens holding their image references.
+findImageTokens :: Namespace -> Kind -> MetadataName -> ContainerName -> [Document] -> [Token]
+findImageTokens ns k mn cn ds = catMaybes $ map (findImageToken ns k mn cn) ds
 
+-- | Concatenate a token stream back into a string, replacing any tokens in a
+-- supplied set with a specific string.
 replaceTokens :: [Token] -- ^ Scalar tokens to be replaced
               -> String  -- ^ Replacement value
               -> [Token] -- ^ Original token stream
@@ -49,7 +55,10 @@ replaceTokens rts rv ts = concat $ fmap toString ts
     where
         toString t = if (elem t rts) then rv else (tText t)
 
-applyFilter :: ImageOptions -> [Token] -> [Document] -> String
-applyFilter io ts ds = replaceTokens rts (image io) ts
+-- | Update the image references in a document stream according to supplied
+-- options.
+updateImages :: ImageOptions -> [Token] -> [Document] -> String
+updateImages io ts ds =
+    replaceTokens rts (image io) ts
     where
-        rts = findContainers (namespace io) (kind io) (name io) (container io) ds
+        rts = findImageTokens (namespace io) (kind io) (name io) (container io) ds

@@ -32,6 +32,22 @@ imageOptionsParser = ImageOptions
 optionsParser :: Parser Options
 optionsParser = Options <$> subparser (command "image" (info imageCommandParser (progDesc "update an image ref")))
 
+-- | Codes we need to parse to recover a nested datastructure from the token
+-- stream.
+parseableCodes = [ BeginDocument
+                 , EndDocument
+                 , BeginNode
+                 , EndNode
+                 , BeginScalar
+                 , EndScalar
+                 , BeginMapping
+                 , EndMapping
+                 , BeginSequence
+                 , EndSequence
+                 , BeginPair
+                 , EndPair
+                 , Text]
+
 main :: IO ()
 main = do
     options <- execParser $ info (optionsParser <**> helper) fullDesc
@@ -39,6 +55,9 @@ main = do
         Image imageOptions -> do
             bytes <- C.hGetContents stdin
             let tokens = yaml "-" bytes False
-            case (runParser parseStream () "-" tokens) of
+                tokens' = filter tokenFilter tokens
+            case (runParser parseStream () "-" tokens') of
                 Left e -> die $ (show tokens ++ show e)
                 Right docs -> putStr $ updateImages imageOptions tokens docs
+    where
+        tokenFilter t = elem (tCode t) parseableCodes

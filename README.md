@@ -8,8 +8,13 @@ Install `stack` from https://haskellstack.org
 
 ## Execution
 
+### Replace image in YAML
 ```
-$ stack run -- image --namespace default --kind Deployment --name nginx-deployment --container nginx --image foo < test.yaml
+$ stack run -- image --namespace default \
+                     --kind Deployment \
+                     --name nginx-deployment \
+                     --container nginx \
+                     --image foo < test.yaml
 # This is some leading commentary
 ---
 apiVersion: apps/v1
@@ -35,4 +40,31 @@ spec:
         image: "foo" # Trailing comment
         ports:
         - containerPort: 80
+```
+
+### Replace image in JSON
+```
+$ stack run -- image --namespace default \
+                     --kind Deployment \
+                     --name nginx-deployment \
+                     --container nginx \
+                     --image foo < test.json
+{
+    "kind": "Deployment",
+    "metadata" : {
+        "name": "nginx-deployment"
+    },
+    "spec": {
+        "template": {
+            "spec": {
+                "containers": [
+                    {
+                        "name": "nginx",
+                        "image": "foo"
+                    }
+                ]
+            }
+        }
+    }
+}
 ```

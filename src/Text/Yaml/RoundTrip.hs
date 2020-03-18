@@ -46,11 +46,8 @@ code c = satisfy (\t -> c == tCode t) <?> show [c]
 notCode :: Stream s Identity Token => Code -> ParsecT s u Identity Token
 notCode c = satisfy (\t -> c /= tCode t) <?> show [c]
 
-ignoreCodes = [Meta, Break, Indicator, White, Indent, DirectivesEnd, BeginComment, EndComment]
-
 bracket :: Stream s Identity Token => Code -> Code -> ParsecT s u Identity a -> ParsecT s u Identity a
 bracket startCode endCode contentParser = do
-    skipMany $ oneOf ignoreCodes
     between (code startCode) (code endCode) contentParser
 
 parseStream :: Stream s Identity Token => ParsecT s u Identity [Document]
@@ -64,15 +61,12 @@ parseDocument = do
 parseNode :: Stream s Identity Token => ParsecT s u Identity Node
 parseNode = do
     node <- bracket BeginNode EndNode (choice [try parseScalar, try parseSequence, try parseMapping])
-    skipMany $ oneOf ignoreCodes
     return node
 
 parseScalar :: Stream s Identity Token => ParsecT s u Identity Node
 parseScalar = do
     text <- bracket BeginScalar EndScalar $ do
-        optional $ code Indicator
         text' <- code Text
-        optional $ code Indicator
         return text'
     return $ Scalar text
 

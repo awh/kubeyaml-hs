@@ -4,12 +4,13 @@ module KubeYaml
     )
     where
 
-import Data.Maybe (catMaybes)
+import Data.Char (toLower)
+import Data.Maybe (catMaybes,fromMaybe)
 
 import Text.Yaml.Reference (Code(..),Token(..),yaml)
 import Text.Yaml.RoundTrip (Document(..),Node(..))
 
-import KubeYaml.Combinators (textOf,elementsOf,kvpsOf,nodeAt,withDefaultText,findElementByName,lookupScalar)
+import KubeYaml.Combinators (textOf,elementsOf,kvpsOf,nodeAt,findElementByName,scalarToken)
 
 data ImageOptions = ImageOptions
     { namespace :: String
@@ -28,16 +29,14 @@ type ContainerName = String
 -- from the input stream which holds its image reference.
 findImageToken :: Namespace -> Kind -> MetadataName -> ContainerName -> Document -> Maybe Token
 findImageToken ns k mn cn (Document root) = do
-        ns' <- withDefaultText "default" $ textOf $ nodeAt ["metadata", "namespace"] root
-        k'  <- textOf $ nodeAt ["kind"] root
-        mn' <- textOf $ nodeAt ["metadata", "name"] root
-        cs  <- elementsOf $ nodeAt ["spec", "template", "spec", "containers"] root
-        c   <- kvpsOf $ findElementByName cn cs
-        i   <- lookupScalar "image" c
-        if ns == ns' && k == k' && mn == mn'
-        then case i of
-            (Scalar token) -> Just token
-            _ -> Nothing
+        let ns' = fromMaybe "default" $ nodeAt ["metadata", "namespace"] root >>= textOf
+        k'  <- nodeAt ["kind"] root >>= textOf
+        mn' <- nodeAt ["metadata", "name"] root >>= textOf
+        cs  <- nodeAt ["spec", "template", "spec", "containers"] root >>= elementsOf
+        it  <- findElementByName cn cs >>= nodeAt ["image"] >>= scalarToken
+
+        if ns == ns' && (map toLower k) == (map toLower k') && mn == mn'
+        then Just it
         else Nothing
 
 -- | Search a list of documents for matching containers, returning the text

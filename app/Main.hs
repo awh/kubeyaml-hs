@@ -3,7 +3,7 @@ module Main where
 import qualified Data.ByteString.Lazy.Char8 as C
 import Text.Yaml.Reference (Code(..),Token(..),yaml)
 
-import KubeYaml (updateImages ,ImageOptions(..))
+import KubeYaml.Commands.Image (updateImages ,ImageOptions(..))
 
 import System.Exit (die)
 import System.IO (stdin)

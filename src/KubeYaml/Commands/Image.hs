@@ -1,4 +1,4 @@
-module KubeYaml
+module KubeYaml.Commands.Image
     ( updateImages
     , ImageOptions(..)
     )

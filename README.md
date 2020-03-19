@@ -1,6 +1,9 @@
 # kubeyaml-hs
 
-A Haskell implementation of https://github.com/squaremo/kubeyaml, using the [reference YAML 1.2 parser](https://github.com/orenbenkiki/yamlreference).
+A partial Haskell implementation of https://github.com/squaremo/kubeyaml, using
+the [reference YAML 1.2 parser](https://github.com/orenbenkiki/yamlreference).
+
+At this stage only the `image` subcommand is implemented as a proof of concept.
 
 ## Theory of Operation
 

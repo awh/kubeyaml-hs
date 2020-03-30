@@ -44,6 +44,7 @@ executables:
     - containers
     - parsec
     - optparse-applicative
+    - split
 
 tests:
   kubeyaml-hs-test:

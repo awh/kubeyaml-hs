@@ -51,29 +51,39 @@ bracket startCode endCode contentParser = do
     between (code startCode) (code endCode) contentParser
 
 parseStream :: Stream s Identity Token => ParsecT s u Identity [Document]
-parseStream = many parseDocument
+parseStream = do
+    docs <- many parseDocument
+    eof
+    return docs
 
 parseDocument :: Stream s Identity Token => ParsecT s u Identity Document
 parseDocument = do
+    skipMany $ code Break
     node <- bracket BeginDocument EndDocument parseNode
     return $ Document node
 
 parseNode :: Stream s Identity Token => ParsecT s u Identity Node
 parseNode = do
-    node <- bracket BeginNode EndNode (choice [try parseScalar, try parseSequence, try parseMapping])
+    skipMany $ code Break
+    node <- choice [try parseScalar, try parseSequence, try parseMapping]
     return node
 
 parseScalar :: Stream s Identity Token => ParsecT s u Identity Node
 parseScalar = do
-    text <- bracket BeginScalar EndScalar $ do
-        text' <- code Text
-        return text'
+    optional $ code Indent
+    text <- bracket BeginScalar EndScalar (code Text)
+    skipMany $ code Break
     return $ Scalar text
 
 parseSequence :: Stream s Identity Token => ParsecT s u Identity Node
 parseSequence = do
-    nodes <- bracket BeginSequence EndSequence (many parseNode)
+    nodes <- bracket BeginSequence EndSequence (many contentParser)
     return $ Sequence nodes
+    where
+        contentParser = do
+            optional $ code Indent
+            code Indent
+            parseNode
 
 parseMapping :: Stream s Identity Token => ParsecT s u Identity Node
 parseMapping = do
@@ -82,6 +92,7 @@ parseMapping = do
 
 parsePair :: Stream s Identity Token => ParsecT s u Identity (Node, Node)
 parsePair = do
+    optional $ code Indent
     bracket BeginPair EndPair contentParser
     where
         contentParser = do

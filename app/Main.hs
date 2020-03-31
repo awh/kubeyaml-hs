@@ -60,8 +60,6 @@ optionsParser = Options <$> subparser
 -- stream.
 parseableCodes = [ BeginDocument
                  , EndDocument
-                 , BeginNode
-                 , EndNode
                  , BeginScalar
                  , EndScalar
                  , BeginMapping
@@ -70,7 +68,10 @@ parseableCodes = [ BeginDocument
                  , EndSequence
                  , BeginPair
                  , EndPair
-                 , Text]
+                 , Text
+                 , Indent
+                 , Break
+                 ]
 
 main :: IO ()
 main = do

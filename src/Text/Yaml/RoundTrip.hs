@@ -4,6 +4,8 @@
 module Text.Yaml.RoundTrip (
     Document(..),
     Node(..),
+    ScalarFields(..),
+    MapEntry(..),
     parseStream
     ) where
 
@@ -24,7 +26,17 @@ deriving instance Ord Token
 data Document = Document Node
     deriving (Show, Eq)
 
-data Node = Scalar Token | Mapping [(Node, Node)] | Sequence [Node]
+data ScalarFields = ScalarFields { scaIndentation :: Maybe Token
+                                 , scaToken       :: Token
+                                 , scaBreak       :: Maybe Token
+                                 } deriving (Show, Eq, Ord)
+
+data MapEntry = MapEntry { mapEntryIndentation :: Maybe Token
+                         , mapEntryKey         :: Node
+                         , mapEntryValue       :: Node
+                         } deriving (Show, Eq, Ord)
+
+data Node = Scalar ScalarFields | Mapping [MapEntry] | Sequence [Node]
     deriving (Show, Eq, Ord)
 
 satisfy :: Stream s Identity Token => (Token -> Bool) -> ParsecT s u Identity Token
@@ -70,10 +82,11 @@ parseNode = do
 
 parseScalar :: Stream s Identity Token => ParsecT s u Identity Node
 parseScalar = do
-    optional $ code Indent
+    indentation <- optionMaybe $ code Indent
     text <- bracket BeginScalar EndScalar (code Text)
+    break <- optionMaybe $ code Break
     skipMany $ code Break
-    return $ Scalar text
+    return $ Scalar $ ScalarFields indentation text break
 
 parseSequence :: Stream s Identity Token => ParsecT s u Identity Node
 parseSequence = do
@@ -90,12 +103,10 @@ parseMapping = do
     pairs <- bracket BeginMapping EndMapping (many parsePair)
     return $ Mapping pairs
 
-parsePair :: Stream s Identity Token => ParsecT s u Identity (Node, Node)
+parsePair :: Stream s Identity Token => ParsecT s u Identity MapEntry
 parsePair = do
-    optional $ code Indent
-    bracket BeginPair EndPair contentParser
-    where
-        contentParser = do
-            key <- parseNode
-            value <- parseNode
-            return (key, value)
+    indentation <- optionMaybe $ code Indent
+    bracket BeginPair EndPair $ do
+        key <- parseNode
+        value <- parseNode
+        return $ MapEntry indentation key value

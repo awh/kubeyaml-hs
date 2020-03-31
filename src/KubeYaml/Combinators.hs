@@ -9,19 +9,19 @@ module KubeYaml.Combinators
     )
     where
 
-import Text.Yaml.RoundTrip (Document(..),Node(..))
+import Text.Yaml.RoundTrip (Document(..),Node(..),ScalarFields(..),MapEntry(..))
 import qualified Data.List (find)
 import Data.Maybe (isJust)
 import Text.Yaml.Reference (Token(..))
 
 -- If the node is a single line scalar, return its token
 scalarToken :: Node -> Maybe Token
-scalarToken (Scalar token) = Just token
+scalarToken (Scalar fields) = Just $ scaToken fields
 scalarToken _ = Nothing
 
 -- If the node is single line scalar, return its text
 textOf :: Node -> Maybe String
-textOf (Scalar token) = Just $ tText token
+textOf (Scalar fields) = Just $ tText $ scaToken fields
 textOf _ = Nothing
 
 -- If the node is a sequence, return its elements
@@ -30,7 +30,7 @@ elementsOf (Sequence nodes) = Just nodes
 elementsOf _ = Nothing
 
 -- If the node is a mapping, return its kvps
-kvpsOf :: Node -> Maybe [(Node, Node)]
+kvpsOf :: Node -> Maybe [MapEntry]
 kvpsOf (Mapping kvps) = Just kvps
 kvpsOf _ = Nothing
 
@@ -43,11 +43,11 @@ findElementByName name ns = Data.List.find pred ns
             if name == name' then Just name else Nothing
         pred _ = False
 
-lookupScalar :: String -> [(Node, Node)] -> Maybe Node
-lookupScalar s ns = fmap snd $ Data.List.find pred ns 
+lookupScalar :: String -> [MapEntry] -> Maybe Node
+lookupScalar s ns = fmap mapEntryValue $ Data.List.find pred ns
     where
-        pred :: (Node, Node) -> Bool
-        pred (Scalar t, _) = s == tText t
+        pred :: MapEntry -> Bool
+        pred (MapEntry _ (Scalar fields) _) = s == (tText $ scaToken fields)
         pred _ = False
 
 nodeAt :: [String] -> Node -> Maybe Node
